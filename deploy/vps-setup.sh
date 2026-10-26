@@ -184,6 +184,10 @@ EOF
   install -d -o "$APP_USER" -g "$APP_USER" "$APP_DIR"
   chown -R "$APP_USER:$APP_USER" "$APP_DIR"
   ok "App directory: $APP_DIR"
+
+  # Backups live outside the code folder so a redeploy never touches them.
+  install -d -m 750 -o "$APP_USER" -g "$APP_USER" /var/backups/mc-paradise
+  ok "Backup directory: /var/backups/mc-paradise"
 }
 
 clone_repos() {

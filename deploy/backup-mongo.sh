@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
-#  MC Paradise Apartment — MongoDB backup
-#  Usage:  sudo -u deploy bash deploy/backup-mongo.sh
-#  Keeps 14 daily archives in /var/backups/mc-paradise.
-#  Add to cron (as the app user):
+#  MC Paradise Apartment - MongoDB backup
+#  Usage:  sudo bash /var/www/mc-paradise/deploy/backup-mongo.sh
+#  Writes one compressed archive per run to /var/backups/mc-paradise
+#  and deletes archives older than 14 days.
+#  Add to root's cron with:  sudo crontab -e
 #    0 3 * * * bash /var/www/mc-paradise/deploy/backup-mongo.sh >> /var/log/mc-paradise-backup.log 2>&1
 # ============================================================
 set -euo pipefail
