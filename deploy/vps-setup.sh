@@ -83,6 +83,24 @@ install_packages() {
   ok "PM2 $(pm2 -v)"
 }
 
+ensure_swap() {
+  if [ "$(swapon --show=NAME --noheadings | wc -l)" -gt 0 ]; then
+    return
+  fi
+  local mem_mb
+  mem_mb="$(awk '/MemTotal/{printf "%d", $2/1024}' /proc/meminfo)"
+  if [ "${mem_mb:-0}" -ge 1800 ]; then
+    return
+  fi
+  log "Adding a 2 GB swap file (small machines run out of memory while building)"
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  chmod 600 /swapfile
+  mkswap /swapfile >/dev/null
+  swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  ok "2 GB swap enabled"
+}
+
 install_mongodb() {
   log "Installing local MongoDB"
   if ! command -v mongod >/dev/null 2>&1; then
@@ -155,7 +173,7 @@ EOF
 
   # Read-only git deploy key (used when a repository is private).
   if [ ! -f "$APP_HOME/.ssh/id_ed25519" ]; then
-    runuser -u "$APP_USER" -- \
+    runuser -u "$APP_USER" -- env HOME="$APP_HOME" \
       ssh-keygen -t ed25519 -N "" -C "mc-paradise-vps" -f "$APP_HOME/.ssh/id_ed25519" >/dev/null
   fi
   ssh-keyscan -H github.com >> "$APP_HOME/.ssh/known_hosts" 2>/dev/null || true
@@ -170,7 +188,7 @@ EOF
 
 clone_repos() {
   log "Fetching the code"
-  git_as() { runuser -u "$APP_USER" -- git "$@"; }
+  git_as() { runuser -u "$APP_USER" -- env HOME="$APP_HOME" git "$@"; }
 
   checkout() {
     local repo="$1" dest="$2" label="$3"
@@ -405,6 +423,7 @@ main() {
   require_root
   validate
   install_packages
+  ensure_swap
   install_mongodb
   create_user
   clone_repos
@@ -418,7 +437,7 @@ main() {
     warn "SKIP_DEPLOY=1 — not building/starting the app."
   else
     log "Building and starting the app"
-    runuser -u "$APP_USER" -- bash "$HERE/vps-deploy.sh"
+    runuser -u "$APP_USER" -- env HOME="$APP_HOME" bash "$HERE/vps-deploy.sh"
   fi
 
   summary

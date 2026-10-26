@@ -24,7 +24,9 @@ warn() { printf '\n\033[1;33m  ! %s\033[0m\n' "$*" >&2; }
 die()  { printf '\n\033[1;31m  ✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 if [ "$(id -u)" -eq 0 ] && [ "$APP_USER" != "root" ]; then
-  exec runuser -u "$APP_USER" -- bash "$0" "$@"
+  APP_HOME="$(getent passwd "$APP_USER" | cut -d: -f6)"
+  [ -n "$APP_HOME" ] || die "Unknown user '$APP_USER'"
+  exec runuser -u "$APP_USER" -- env HOME="$APP_HOME" bash "$0" "$@"
 fi
 
 [ -d "$APP_DIR/.git" ] || die "No backend checkout at $APP_DIR"
