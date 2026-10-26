@@ -62,7 +62,7 @@ install_packages() {
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
   apt-get install -y \
-    curl git gnupg ca-certificates build-essential ufw nginx \
+    curl git gnupg ca-certificates build-essential ufw nginx openssh-client \
     certbot python3-certbot-nginx rsync unzip openssl
 
   local major=0
