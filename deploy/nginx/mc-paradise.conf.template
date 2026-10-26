@@ -1,5 +1,5 @@
 # ============================================================
-#  MC Paradise Apartment — Nginx site
+#  MC Paradise Apartment - Nginx site
 #  Rendered by vps-setup.sh (replaces __SERVER_NAME__ and __APP_DIR__).
 #  After that, certbot edits this file to add the HTTPS server block.
 # ============================================================

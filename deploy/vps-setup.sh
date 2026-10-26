@@ -4,7 +4,7 @@
 #  Ubuntu 22.04 / 24.04 (Scratch Cloud or any provider)
 #
 #  Usage (as root, from the deploy/ folder):
-#      cp deploy.env.example deploy.env && nano deploy.env
+#      cd /var/www/mc-paradise/deploy
 #      sudo bash vps-setup.sh
 #
 #  Installs Node.js 22, PM2, MongoDB 8 (local), Nginx, Certbot,
@@ -183,9 +183,9 @@ clone_repos() {
     fi
 
     if [ -e "$dest" ]; then
-      # A clone of the backend repo leaves an empty `Frontend/` git-link directory.
+      # A clone of the backend repo can leave an empty `Frontend/` directory.
       if [ -d "$dest" ] && [ -z "$(ls -A "$dest" 2>/dev/null)" ]; then
-        rmdir "$dest"
+        : # git clone is happy to use an existing empty directory
       else
         die "$dest exists but is not a git checkout. Move it away and re-run."
       fi
@@ -198,7 +198,8 @@ clone_repos() {
     ok "$label cloned ($BRANCH)"
   }
 
-  checkout "$REPO_BACKEND" "$APP_DIR/backend" "Backend"
+  # The backend repository root is the app folder: it holds backend/ and deploy/.
+  checkout "$REPO_BACKEND" "$APP_DIR" "Backend"
   if ! checkout "$REPO_FRONTEND" "$APP_DIR/Frontend" "Frontend"; then
     warn "Could not clone the frontend repository: $REPO_FRONTEND"
     cat <<EOF

@@ -27,7 +27,7 @@ if [ "$(id -u)" -eq 0 ] && [ "$APP_USER" != "root" ]; then
   exec runuser -u "$APP_USER" -- bash "$0" "$@"
 fi
 
-[ -d "$APP_DIR/backend/.git" ] || die "No backend checkout at $APP_DIR/backend"
+[ -d "$APP_DIR/.git" ] || die "No backend checkout at $APP_DIR"
 [ -d "$APP_DIR/Frontend/.git" ] || die "No frontend checkout at $APP_DIR/Frontend"
 
 pull() {
@@ -101,7 +101,7 @@ health_check() {
 }
 
 main() {
-  pull "$APP_DIR/backend" "backend"
+  pull "$APP_DIR" "backend"
   install_node_deps "$APP_DIR/backend" "backend" --omit=dev
   pull "$APP_DIR/Frontend" "frontend"
   build_frontend
