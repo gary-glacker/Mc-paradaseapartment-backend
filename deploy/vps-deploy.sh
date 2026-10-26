@@ -46,9 +46,49 @@ install_node_deps() {
   shift 2
   log "Installing $label dependencies"
   cd "$dir"
-  if ! npm ci "$@"; then
-    warn "npm ci failed (lockfile out of sync?) — falling back to npm install"
+
+  # npm has to delete and recreate entries inside node_modules. If any of
+  # them was created by another user (a manual 'sudo npm install', or an
+  # earlier run as root) npm fails with EACCES — and the real cause looks
+  # like a broken lockfile. Catch it before wasting a minute.
+  if [ "$(id -u)" -ne 0 ] && [ -d node_modules ] \
+     && [ -n "$(find node_modules ! -user "$(id -un)" -print -quit 2>/dev/null)" ]; then
+    warn "Some files in $dir/node_modules belong to another user."
+    warn "This happens when npm was run as root. Fix it once, then re-run:"
+    warn "    sudo chown -R $APP_USER:$APP_USER $APP_DIR"
+    die "Refusing to install into a folder owned by root."
+  fi
+
+  local out rc=0
+  out="$(npm ci "$@" 2>&1)" || rc=$?
+  printf '%s\n' "$out"
+
+  if [ "$rc" -eq 0 ]; then
+    ok "$label dependencies installed"
+    return 0
+  fi
+
+  if printf '%s' "$out" | grep -qi 'EACCES'; then
+    warn "Permission denied inside node_modules — it was created by root."
+    warn "Fix once with:  sudo chown -R $APP_USER:$APP_USER $APP_DIR"
+    die "npm ci failed on permissions."
+  fi
+
+  if printf '%s' "$out" | grep -qiE 'can only install packages|package-lock\.json|EUSAGE'; then
+    warn "npm ci could not use the lockfile — falling back to npm install"
+    warn "Commit the updated package-lock.json afterwards."
     npm install "$@"
+  else
+    die "npm ci failed in $dir — see the errors above."
+  fi
+}
+
+check_disk() {
+  local avail_kb
+  avail_kb="$(df -Pk "$APP_DIR" | awk 'NR==2 {print $4}')"
+  if [ -n "${avail_kb:-}" ] && [ "$avail_kb" -lt 512000 ]; then
+    warn "Only $((avail_kb / 1024)) MB free where $APP_DIR lives."
+    warn "npm and the frontend build need roughly 600 MB. Free space first (guide chapter 9.6)."
   fi
 }
 
@@ -103,6 +143,7 @@ health_check() {
 }
 
 main() {
+  check_disk
   pull "$APP_DIR" "backend"
   install_node_deps "$APP_DIR/backend" "backend" --omit=dev
   pull "$APP_DIR/Frontend" "frontend"
