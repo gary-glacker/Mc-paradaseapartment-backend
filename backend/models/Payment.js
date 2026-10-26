@@ -22,7 +22,7 @@ const paymentRecordSchema = new Schema(
     /** What the money was for. */
     purpose: {
       type: String,
-      enum: ['rent', 'deposit', 'service', 'gym', 'restaurant', 'other'],
+      enum: ['rent', 'deposit', 'service', 'gym', 'restaurant', 'other', 'refund'],
       default: 'rent',
       index: true,
     },

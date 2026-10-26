@@ -1,0 +1,5 @@
+# Frontend lives in its own repository
+/Frontend/
+
+.DS_Store
+Thumbs.db

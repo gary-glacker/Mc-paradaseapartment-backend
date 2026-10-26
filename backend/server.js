@@ -18,11 +18,16 @@ import routes from './routes/index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT || 4000)
+/** Production binds to 127.0.0.1 so only Nginx can reach the API. */
+const HOST = process.env.HOST || '0.0.0.0'
 
 /** The built website lives in Frontend/dist (served here in production). */
 const DIST = path.join(__dirname, '..', 'Frontend', 'dist')
 
 const app = express()
+
+/* Nginx is the only hop in front of us, so trust its X-Forwarded-* headers. */
+app.set('trust proxy', 1)
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean) || '*',
@@ -39,7 +44,9 @@ app.use('/api', routes)
 
 if (fs.existsSync(DIST)) {
   app.use(express.static(DIST))
-  app.get('*', (req, res) => {
+  app.get('*', (req, res, next) => {
+    // Unknown /api paths must stay JSON 404s, not the SPA shell.
+    if (req.path.startsWith('/api/')) return next()
     res.sendFile(path.join(DIST, 'index.html'))
   })
 } else {
@@ -63,9 +70,9 @@ async function start() {
     await connectDb()
     const seeded = await seedDatabase()
 
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, HOST, () => {
       console.log(`\n  MongoDB          →  ${MONGODB_URI}`)
-      console.log(`  MC Paradise API  →  http://localhost:${PORT}`)
+      console.log(`  MC Paradise API  →  http://${HOST}:${PORT}`)
       if (seeded.admin.created) {
         console.log(`  Admin created    →  ${seeded.admin.username}`)
         console.log(`                     password: ${process.env.ADMIN_PASSWORD || 'admin123'}`)

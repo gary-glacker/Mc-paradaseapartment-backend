@@ -607,5 +607,60 @@ export async function portalDashboard(req, res) {
   })
 }
 
+/** GET /api/reports/rooms - room booking report with people, days remaining */
+export async function roomOccupancyReport(req, res) {
+  const { Tenancy } = await import('../models/index.js')
+  const { Customer, Room } = await import('../models/index.js')
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+
+  const [tenancies, rooms] = await Promise.all([
+    Tenancy.find({ status: { $in: ['pending', 'active'] } }).sort({ checkIn: 1 }),
+    Room.find({}).sort({ number: 1 }),
+  ])
+
+  const customerIds = tenancies.map((t) => t.customer).filter(Boolean)
+  const customers = await Customer.find({ _id: { $in: customerIds } })
+  const cMap = new Map(customers.map((c) => [String(c._id), c]))
+
+  const list = tenancies.map((t) => {
+    const c = cMap.get(String(t.customer))
+    let daysRemaining = null
+    if (t.checkOut) {
+      const end = new Date(`${String(t.checkOut).slice(0,10)}T00:00:00`)
+      const now = new Date(`${todayKey}T00:00:00`)
+      daysRemaining = Math.ceil((end.getTime() - now.getTime()) / 86400000)
+      if (daysRemaining < 0) daysRemaining = 0
+    }
+    return {
+      tenancyId: t._id,
+      ref: t.ref,
+      status: t.status,
+      roomId: t.room,
+      roomNumber: t.roomNumber || '—',
+      roomName: t.roomName || '',
+      customer: {
+        id: c?._id,
+        fullName: c?.fullName || t.customerName || '—',
+        phone: c?.phone || t.customerPhone || '',
+        code: c?.code || t.customerCode || '',
+        email: c?.email || '',
+      },
+      checkIn: t.checkIn,
+      checkOut: t.checkOut,
+      nights: t.nights,
+      guests: t.guests,
+      pricePerNight: t.pricePerNight,
+      total: t.total,
+      currency: t.currency,
+      daysRemaining,
+      agreementSigned: Boolean(t.agreement?.signedAt),
+      gymIncluded: t.gymIncluded,
+    }
+  })
+
+  res.json({ rooms: rooms.map((r)=>r.toJSON()), tenancies: list, today: todayKey })
+}
+
 /** Confirms a phone number belongs to the signed-in customer. */
 export const ownsPhone = (customer, phone) => digits(customer.phone) === digits(phone)

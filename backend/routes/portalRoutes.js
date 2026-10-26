@@ -24,6 +24,9 @@ router.get('/me', ah(portal.customerMe))
 router.post('/logout', ah(portal.customerLogout))
 router.post('/password', ah(portal.customerChangePassword))
 
+router.get('/bookings', ah(portal.myBookings))
+router.post('/bookings', ah(portal.createBooking))
+
 router.get('/dashboard', ah(tenancies.portalDashboard))
 
 router.get('/tenancies', ah(tenancies.myTenancies))

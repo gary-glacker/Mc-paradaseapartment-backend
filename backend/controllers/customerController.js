@@ -377,3 +377,49 @@ export async function resetPassword(req, res) {
 
   res.json({ ok: true, message: 'Password reset successful. You can now sign in.' })
 }
+
+/** GET /api/portal/bookings - list bookings for logged in customer */
+export async function myBookings(req, res) {
+  const { Booking } = await import('../models/index.js')
+  const bookings = await Booking.find({ 'guest.phone': req.customer.phone }).sort({ createdAt: -1 })
+  res.json({ bookings: bookings.map((b) => b.toJSON()) })
+}
+
+/** POST /api/portal/bookings - request a new booking from portal */
+export async function createBooking(req, res) {
+  const { Booking } = await import('../models/index.js')
+  const { newBookingRef } = await import('../utils/auth.js')
+  const b = req.body ?? {}
+  const checkIn = String(b.checkIn || '')
+  const checkOut = String(b.checkOut || '')
+  if (!checkIn || !checkOut) return res.status(400).json({ error: 'Check-in and check-out dates are required.' })
+  if (new Date(checkOut) <= new Date(checkIn)) return res.status(400).json({ error: 'Check-out must be after check-in.' })
+
+  const start = new Date(`${checkIn}T00:00:00`)
+  const end = new Date(`${checkOut}T00:00:00`)
+  const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000))
+
+  const booking = await Booking.create({
+    ref: newBookingRef(),
+    kind: 'apartment',
+    status: 'pending',
+    guest: {
+      fullName: req.customer.fullName,
+      phone: String(b.phone || req.customer.phone || ''),
+      email: req.customer.email || '',
+      notes: String(b.notes || ''),
+    },
+    stay: {
+      checkIn,
+      checkOut,
+      nights,
+      guests: Number(b.guests) || 1,
+      adults: Number(b.guests) || 1,
+      children: 0,
+    },
+    total: 0,
+    currency: 'USD',
+  })
+
+  res.status(201).json({ booking: booking.toJSON() })
+}
