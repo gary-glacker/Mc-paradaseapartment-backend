@@ -21,7 +21,7 @@ API listens on **http://localhost:4000**.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust as needed:
+Create `backend/.env` and adjust as needed — it is the only backend env file:
 
 | Variable         | Default                                      | Purpose                          |
 | ---------------- | -------------------------------------------- | -------------------------------- |
@@ -426,8 +426,25 @@ guest.
 
 ## Production
 
-When a build exists in `Frontend/dist`, the API also serves the built website
-(with an SPA fallback), so a single process hosts both the site and the API:
+On the VPS the app is served by **Nginx** (`/var/www/mc-paradise`):
+
+- `Frontend/dist` — static site, with an SPA fallback
+- `127.0.0.1:4000` — the API, proxied from `/api/` by Nginx and kept alive by PM2
+
+First-time provisioning installs Node 22, PM2, MongoDB 8, Nginx and the TLS
+certificate, writes `backend/.env` with fresh secrets, and deploys:
+
+```bash
+sudo bash /var/www/mc-paradise/deploy/vps-setup.sh
+```
+
+Every later update (pull, install, build, restart, health check):
+
+```bash
+sudo -u deploy bash /var/www/mc-paradise/deploy/vps-deploy.sh
+```
+
+Without Nginx, the API can still serve the built site itself:
 
 ```bash
 cd Frontend

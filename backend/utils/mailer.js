@@ -13,7 +13,7 @@
    configured, or the send fails, the failure is logged and a
    notification is recorded — the booking still succeeds.
 
-   Configure in backend/.env (see .env.example):
+   Configure in backend/.env:
      SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASSWORD,
      MAIL_FROM, PUBLIC_SITE_URL
    ============================================================ */
